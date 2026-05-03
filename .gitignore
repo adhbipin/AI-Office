@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+node_modules/
+workspace/
+ai-office/workspace/
+.DS_Store

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Office</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="ui-panel">
+        <div id="task-form">
+            <textarea id="taskInput" placeholder="Enter task..."></textarea>
+            <button onclick="sendTask()">Send Task</button>
+        </div>
+        <div id="agent-status"></div>
+        <div id="live-feed"></div>
+        <div id="workspace-viewer">
+            <strong>Workspace Files</strong>
+            <div id="file-list"></div>
+        </div>
+    </div>
+    <script src="office.js"></script>
+    <script src="ui.js"></script>
+</body>
+</html>
