@@ -50,8 +50,8 @@ The server will start at `http://127.0.0.1:8000`.
 
 ### Step 2: Open the Frontend
 1. Navigate to the `frontend` directory.
-2. Open `index.html` in your web browser.
-3. You should see a green "Connected to Backend" status bar if everything is working correctly.
+2. Open `index.html` in your web browser. This single file now contains the full 3D office engine and HUD.
+3. You should see a "CONNECTED" status bar if the backend is running.
 
 ---
 

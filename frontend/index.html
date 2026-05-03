@@ -1,28 +1,1104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>AI Office</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Office — The Living Workspace</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ink: #0e0f14;
+  --paper: #f4f1eb;
+  --pm:   #1db87a;
+  --ui:   #7c6fef;
+  --fe:   #3b8de8;
+  --be:   #e05c2d;
+  --qa:   #d4960f;
+  --dv:   #5a9e1f;
+  --glass: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.1);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #0a0b10;
+  font-family: 'Syne', sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  cursor: crosshair;
+}
+
+/* ── CANVAS ── */
+#canvas { display: block; position: fixed; inset: 0; }
+
+/* ── HUD OVERLAY ── */
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* TOP BAR */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 52px;
+  background: linear-gradient(180deg, rgba(10,11,16,0.98) 0%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  pointer-events: all;
+  z-index: 20;
+}
+
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--pm);
+  box-shadow: 0 0 8px var(--pm);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,100% { transform: scale(1); opacity:1; }
+  50% { transform: scale(1.4); opacity:0.7; }
+}
+
+.top-agents {
+  display: flex;
+  gap: 6px;
+}
+
+.agent-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 8px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.agent-pill:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.agent-pill.active {
+  border-color: var(--agent-color);
+  color: var(--agent-color);
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 12px rgba(255,255,255,0.05), inset 0 0 8px rgba(255,255,255,0.03);
+}
+
+.pill-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--agent-color);
+  box-shadow: 0 0 6px var(--agent-color);
+}
+
+.pill-status {
+  font-size: 8px;
+  font-family: 'Space Mono', monospace;
+  color: rgba(255,255,255,0.35);
+  margin-left: 2px;
+}
+
+.agent-pill.thinking .pill-status { color: var(--agent-color); animation: blink 0.8s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* TASK INPUT */
+#task-panel {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  pointer-events: all;
+  z-index: 20;
+}
+
+.task-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 14px;
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.task-input-wrap:focus-within {
+  border-color: rgba(255,255,255,0.3);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.task-prefix {
+  padding: 0 14px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+}
+
+#task-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 14px 0;
+  caret-color: var(--pm);
+}
+
+#task-input::placeholder { color: rgba(255,255,255,0.22); }
+
+#send-btn {
+  margin: 6px;
+  padding: 8px 18px;
+  background: var(--pm);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+#send-btn:hover { background: #23d48c; transform: scale(1.03); }
+#send-btn:active { transform: scale(0.97); }
+
+/* FEED PANEL */
+#feed-panel {
+  position: fixed;
+  right: 20px;
+  top: 64px;
+  bottom: 250px;
+  width: 280px;
+  pointer-events: all;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feed-header {
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.1em;
+  padding: 0 4px;
+  text-transform: uppercase;
+}
+
+#feed-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+#feed-messages::-webkit-scrollbar { width: 3px; }
+#feed-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+.feed-msg {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-left: 2px solid var(--msg-color);
+  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-in {
+  from { opacity:0; transform: translateX(16px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+.feed-agent {
+  font-size: 9px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  color: var(--msg-color);
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.feed-text {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.6;
+}
+
+/* WORKSPACE VIEWER */
+#workspace-viewer {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  width: 280px;
+  height: 210px;
+  pointer-events: all;
+  z-index: 20;
+  background: rgba(10,11,16,0.85);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 12px;
+  backdrop-filter: blur(20px);
+}
+
+#workspace-viewer strong {
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    color: rgba(255,255,255,0.4);
+    display: block;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+}
+
+#file-list {
+    overflow-y: auto;
+    height: 160px;
+}
+
+#file-list div {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+}
+
+/* AGENT INSPECTOR */
+#inspector {
+  position: fixed;
+  left: 20px;
+  top: 64px;
+  width: 240px;
+  pointer-events: all;
+  z-index: 20;
+  background: rgba(10,11,16,0.85);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(20px);
+  transform: translateX(-280px);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#inspector.open { transform: translateX(0); }
+
+.inspector-agent-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.inspector-role {
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: var(--i-color);
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+}
+
+.inspector-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 11px;
+}
+
+.stat-label { color: rgba(255,255,255,0.4); }
+.stat-value { color: #fff; font-weight: 600; font-family: 'Space Mono', monospace; font-size: 10px; }
+.stat-value.active { color: var(--i-color); }
+
+.close-inspector {
+  position: absolute;
+  top: 12px; right: 12px;
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.07);
+  border: none;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SPEECH BUBBLES */
+.speech-bubble {
+  position: fixed;
+  pointer-events: none;
+  z-index: 30;
+  background: rgba(15,16,22,0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 8px 12px;
+  max-width: 200px;
+  backdrop-filter: blur(12px);
+  animation: bubble-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
+}
+
+@keyframes bubble-in {
+  from { opacity:0; transform: scale(0.7) translateY(10px); }
+  to   { opacity:1; transform: scale(1) translateY(0); }
+}
+
+.bubble-name {
+  font-size: 9px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
+}
+
+.bubble-text {
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.5;
+}
+
+.bubble-tail {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px; height: 6px;
+  background: rgba(15,16,22,0.92);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+/* PARTICLE CANVAS */
+#particle-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* AMBIENT GLOW */
+.glow-orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(80px);
+  opacity: 0.06;
+}
+
+/* TIME/STATUS BAR */
+#status-bar {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  z-index: 20;
+  white-space: nowrap;
+}
+
+/* CLICK HINT */
+#click-hint {
+  position: fixed;
+  bottom: 90px;
+  left: 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.2);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* LOADING */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: #0a0b10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  gap: 20px;
+  transition: opacity 0.8s;
+}
+
+#loading.done { opacity: 0; pointer-events: none; }
+
+.load-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pm);
+  letter-spacing: 0.2em;
+}
+
+.load-bar-wrap {
+  width: 200px;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.load-bar {
+  height: 100%;
+  background: var(--pm);
+  border-radius: 2px;
+  width: 0;
+  transition: width 0.05s linear;
+  box-shadow: 0 0 8px var(--pm);
+}
+
+.load-status {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.08em;
+}
+</style>
 </head>
 <body>
-    <div id="canvas-container"></div>
-    <div id="ui-panel">
-        <div id="task-form">
-            <textarea id="taskInput" placeholder="Enter task..."></textarea>
-            <button onclick="sendTask()">Send Task</button>
-        </div>
-        <div id="agent-status"></div>
-        <div id="live-feed"></div>
-        <div id="workspace-viewer">
-            <strong>Workspace Files</strong>
-            <div id="file-list"></div>
-        </div>
-    </div>
-    <script src="office.js"></script>
-    <script src="ui.js"></script>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="load-title">INITIALIZING AI OFFICE</div>
+  <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
+  <div class="load-status" id="load-status">LOADING THREE.JS ENGINE...</div>
+</div>
+
+<!-- Ambient glow orbs -->
+<div class="glow-orb" style="width:500px;height:500px;background:#1db87a;top:-100px;left:-100px;"></div>
+<div class="glow-orb" style="width:400px;height:400px;background:#7c6fef;top:30%;right:-100px;"></div>
+<div class="glow-orb" style="width:300px;height:300px;background:#3b8de8;bottom:-50px;left:30%;"></div>
+
+<!-- Main 3D canvas -->
+<canvas id="canvas"></canvas>
+
+<!-- Particle overlay canvas -->
+<canvas id="particle-canvas"></canvas>
+
+<!-- HUD -->
+<div id="topbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    AI OFFICE
+  </div>
+  <div class="top-agents" id="top-agents"></div>
+</div>
+
+<div id="feed-panel">
+  <div class="feed-header">// LIVE MESSAGE BUS</div>
+  <div id="feed-messages"></div>
+</div>
+
+<div id="workspace-viewer">
+    <strong>Workspace Files</strong>
+    <div id="file-list"></div>
+</div>
+
+<div id="inspector">
+  <button class="close-inspector" onclick="closeInspector()">×</button>
+  <div class="inspector-agent-name" id="insp-name">—</div>
+  <div class="inspector-role" id="insp-role">—</div>
+  <div class="inspector-stat"><span class="stat-label">STATUS</span><span class="stat-value active" id="insp-status">IDLE</span></div>
+  <div class="inspector-stat"><span class="stat-label">MODEL</span><span class="stat-value" id="insp-model">—</span></div>
+  <div class="inspector-stat"><span class="stat-label">TASKS DONE</span><span class="stat-value" id="insp-tasks">0</span></div>
+  <div class="inspector-stat"><span class="stat-label">LAST MSG</span><span class="stat-value" id="insp-msg" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span></div>
+</div>
+
+<div id="task-panel">
+  <div class="task-input-wrap">
+    <span class="task-prefix">TASK://</span>
+    <input id="task-input" type="text" placeholder="Build a portfolio website for a photographer…" autocomplete="off" />
+    <button id="send-btn" onclick="startTask()">DISPATCH</button>
+  </div>
+</div>
+
+<div id="status-bar">IDLE — 0 AGENTS ACTIVE</div>
+<div id="click-hint">CLICK AGENT TO INSPECT</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// REAL BACKEND CONNECTION
+// ─────────────────────────────────────────────────────────────────────────────
+const ws = new WebSocket('ws://127.0.0.1:8000/ws');
+
+ws.onopen = () => {
+    console.log('Connected to backend');
+    document.getElementById('status-bar').textContent = 'CONNECTED — READY FOR TASK';
+};
+
+ws.onerror = (err) => {
+    console.error('WebSocket Error:', err);
+    document.getElementById('status-bar').textContent = 'CONNECTION ERROR — RESTART BACKEND';
+};
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    const agentId = AGENT_NAME_MAP[data.from] || 'pm';
+    
+    // 1. Add to feed
+    addFeed(agentId, data.message);
+    
+    // 2. Show bubble
+    showBubble(agentId, data.message);
+    
+    // 3. Update status & particles
+    const isThinking = data.message.includes('Thinking');
+    setPillStatus(agentId, isThinking ? 'thinking' : 'active');
+    
+    avatarState[agentId].status = isThinking ? 'thinking' : 'active';
+    avatarState[agentId].lastMsg = data.message;
+    if (!isThinking) avatarState[agentId].tasksDone++;
+
+    // 4. Particles (if sender is talking to someone or broadcasting)
+    if (data.to && data.to !== 'All') {
+        const toId = AGENT_NAME_MAP[data.to];
+        if (toId) spawnParticles(agentId, toId);
+    } else if (data.to === 'All') {
+        // Broadcast particles to all agents? For now just random or center
+        AGENTS.forEach(a => { if(a.id !== agentId) spawnParticles(agentId, a.id); });
+    }
+
+    // 5. Talking animation
+    if (!isThinking) {
+        const av = avatarGroups[agentId];
+        if (av) {
+            av.userData.isTalking = true;
+            av.userData.talkTimer = 3;
+        }
+    }
+
+    // Check completion
+    if (data.message.includes('✅ All tasks completed')) {
+        AGENTS.forEach(a => setPillStatus(a.id, 'idle'));
+        document.getElementById('status-bar').textContent = 'TASK COMPLETE — ALL AGENTS IDLE';
+        document.getElementById('send-btn').textContent = 'DISPATCH';
+        document.getElementById('send-btn').style.opacity = '1';
+        taskRunning = false;
+    }
+};
+
+function startTask() {
+    const taskInput = document.getElementById('task-input');
+    const description = taskInput.value.trim();
+    if (!description || taskRunning) return;
+    
+    taskRunning = true;
+    document.getElementById('send-btn').textContent = 'RUNNING…';
+    document.getElementById('send-btn').style.opacity = '0.5';
+    
+    // Clear feed
+    document.getElementById('feed-messages').innerHTML = '';
+
+    fetch('http://127.0.0.1:8000/task', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({description})
+    });
+}
+
+function refreshWorkspace() {
+    fetch('http://127.0.0.1:8000/workspace')
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            data.files.forEach(file => {
+                const item = document.createElement('div');
+                item.innerText = '📄 ' + file;
+                item.onclick = () => {
+                    fetch(`http://127.0.0.1:8000/workspace/${file}`)
+                        .then(res => res.json())
+                        .then(fileData => {
+                            alert(`Content of ${file}:\n\n${fileData.content}`);
+                        });
+                };
+                list.appendChild(item);
+            });
+        });
+}
+
+setInterval(refreshWorkspace, 5000);
+refreshWorkspace();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AGENT DEFINITIONS
+// ─────────────────────────────────────────────────────────────────────────────
+const AGENTS = [
+  { id:'pm',       label:'PM',       name:'Project Manager',    color:0x1db87a, hex:'#1db87a', model:'llama3:8b',          pos:[  0, 0, -3.5] },
+  { id:'ui',       label:'UI/UX',    name:'UI/UX Designer',     color:0x7c6fef, hex:'#7c6fef', model:'llama3:8b',          pos:[ -4, 0, -1  ] },
+  { id:'frontend', label:'Frontend', name:'Frontend Developer', color:0x3b8de8, hex:'#3b8de8', model:'codellama:latest',   pos:[ -2.2, 0,  1.8] },
+  { id:'backend',  label:'Backend',  name:'Backend Developer',  color:0xe05c2d, hex:'#e05c2d', model:'codellama:latest',   pos:[  2.2, 0,  1.8] },
+  { id:'qa',       label:'QA',       name:'QA Engineer',        color:0xd4960f, hex:'#d4960f', model:'llama3:8b',          pos:[  4,   0, -1  ] },
+  { id:'devops',   label:'DevOps',   name:'DevOps Engineer',    color:0x5a9e1f, hex:'#5a9e1f', model:'llama3:8b',          pos:[  0,   0,  3.2] },
+];
+
+const AGENT_MAP = {};
+const AGENT_NAME_MAP = {};
+AGENTS.forEach(a => {
+    AGENT_MAP[a.id] = a;
+    AGENT_NAME_MAP[a.name] = a.id;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENE SETUP
+// ─────────────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0b10);
+scene.fog = new THREE.FogExp2(0x0a0b10, 0.08);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 9, 12);
+camera.lookAt(0, 0, 0);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIGHTING
+// ─────────────────────────────────────────────────────────────────────────────
+const ambientLight = new THREE.AmbientLight(0x1a1d2e, 3);
+scene.add(ambientLight);
+
+function addCeilingLight(x, z, color, intensity) {
+  const light = new THREE.RectAreaLight(color, intensity, 2, 1);
+  light.position.set(x, 4.8, z);
+  light.lookAt(x, 0, z);
+  scene.add(light);
+  const geo = new THREE.BoxGeometry(2, 0.05, 1);
+  const mat = new THREE.MeshStandardMaterial({
+    color: color, emissive: color, emissiveIntensity: 0.8,
+    transparent: true, opacity: 0.9
+  });
+  const panel = new THREE.Mesh(geo, mat);
+  panel.position.set(x, 4.78, z);
+  scene.add(panel);
+}
+
+addCeilingLight(-3, -2, 0xfff5e0, 12);
+addCeilingLight( 3, -2, 0xfff5e0, 12);
+addCeilingLight(-3,  2, 0xfff5e0, 12);
+addCeilingLight( 3,  2, 0xfff5e0, 12);
+addCeilingLight( 0,  0, 0xfff5e0, 10);
+
+AGENTS.forEach(agent => {
+  const spot = new THREE.PointLight(agent.color, 1.5, 3.5);
+  spot.position.set(agent.pos[0], 2, agent.pos[2]);
+  scene.add(spot);
+});
+
+const sun = new THREE.DirectionalLight(0xffeedd, 1.5);
+sun.position.set(-5, 10, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 2048;
+sun.shadow.mapSize.height = 2048;
+scene.add(sun);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MATERIALS
+// ─────────────────────────────────────────────────────────────────────────────
+const MATS = {
+  floor: new THREE.MeshStandardMaterial({ color: 0x1a1c24, roughness: 0.2, metalness: 0.4 }),
+  floorTile: new THREE.MeshStandardMaterial({ color: 0x1e2030, roughness: 0.3, metalness: 0.3 }),
+  wall: new THREE.MeshStandardMaterial({ color: 0x14151f, roughness: 0.8, metalness: 0.0 }),
+  ceiling: new THREE.MeshStandardMaterial({ color: 0x0e0f16, roughness: 0.9, metalness: 0.0 }),
+  desk: new THREE.MeshStandardMaterial({ color: 0x2a2d3e, roughness: 0.3, metalness: 0.5 }),
+  deskLight: (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.4, metalness: 0.3, emissive: c, emissiveIntensity: 0.15 }),
+  monitor: new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.1, metalness: 0.9 }),
+  screen: (c) => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.6, roughness: 0.0, metalness: 0.0 }),
+  chair: new THREE.MeshStandardMaterial({ color: 0x1c1e2a, roughness: 0.7, metalness: 0.2 }),
+  chairBase: new THREE.MeshStandardMaterial({ color: 0x2a2d3e, roughness: 0.2, metalness: 0.8 }),
+  skin: new THREE.MeshStandardMaterial({ color: 0xc8956a, roughness: 0.8, metalness: 0.0 }),
+  carpet: new THREE.MeshStandardMaterial({ color: 0x13141c, roughness: 0.95, metalness: 0.0 }),
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OFFICE ENVIRONMENT
+// ─────────────────────────────────────────────────────────────────────────────
+const officeGroup = new THREE.Group();
+scene.add(officeGroup);
+
+const floorGeo = new THREE.BoxGeometry(18, 0.15, 14);
+const floor = new THREE.Mesh(floorGeo, MATS.floor);
+floor.position.y = -0.08;
+floor.receiveShadow = true;
+officeGroup.add(floor);
+
+const carpetGeo = new THREE.BoxGeometry(10, 0.01, 7);
+const carpet = new THREE.Mesh(carpetGeo, MATS.carpet);
+carpet.position.set(0, 0.01, 0);
+carpet.receiveShadow = true;
+officeGroup.add(carpet);
+
+for (let x = -8; x <= 8; x += 2) {
+  for (let z = -6; z <= 6; z += 2) {
+    if (Math.abs(x) > 4 || Math.abs(z) > 3) {
+      const tileGeo = new THREE.BoxGeometry(1.9, 0.01, 1.9);
+      const tile = new THREE.Mesh(tileGeo, MATS.floorTile);
+      tile.position.set(x, 0.001, z);
+      officeGroup.add(tile);
+    }
+  }
+}
+
+const ceilGeo = new THREE.BoxGeometry(18, 0.2, 14);
+const ceil = new THREE.Mesh(ceilGeo, MATS.ceiling);
+ceil.position.y = 5;
+officeGroup.add(ceil);
+
+function addWall(w, h, d, x, y, z) {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const m = new THREE.Mesh(geo, MATS.wall);
+  m.position.set(x, y, z);
+  m.receiveShadow = true;
+  officeGroup.add(m);
+}
+addWall(18, 5, 0.2, 0, 2.5, -7); 
+addWall(18, 5, 0.2, 0, 2.5,  7); 
+addWall(0.2, 5, 14, -9, 2.5, 0); 
+addWall(0.2, 5, 14,  9, 2.5, 0); 
+
+function addWindow(x, y, z) {
+  const frameGeo = new THREE.BoxGeometry(2.4, 2.4, 0.1);
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x2a2d3e, roughness: 0.2, metalness: 0.8 });
+  const frame = new THREE.Mesh(frameGeo, frameMat);
+  frame.position.set(x, y, z);
+  officeGroup.add(frame);
+  const glassGeo = new THREE.BoxGeometry(2, 2, 0.05);
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x4a7ecc, emissive: 0x2244aa, emissiveIntensity: 0.3, transparent: true, opacity: 0.5 });
+  const glass = new THREE.Mesh(glassGeo, glassMat);
+  glass.position.set(x, y, z + 0.06);
+  officeGroup.add(glass);
+}
+addWindow(-4.5, 3, -6.9); addWindow( 0, 3, -6.9); addWindow( 4.5, 3, -6.9);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DESK BUILDER
+// ─────────────────────────────────────────────────────────────────────────────
+function buildDesk(agent) {
+  const group = new THREE.Group();
+  const [x,,z] = agent.pos;
+  const accentMat = MATS.deskLight(new THREE.Color(agent.color));
+
+  const surfaceGeo = new THREE.BoxGeometry(2, 0.06, 1);
+  const surface = new THREE.Mesh(surfaceGeo, MATS.desk);
+  surface.position.y = 0.8;
+  surface.castShadow = true;
+  group.add(surface);
+
+  [[0.9, -0.5], [0.9, 0.5], [-0.9, -0.5], [-0.9, 0.5]].forEach(([lx, lz]) => {
+    const legGeo = new THREE.BoxGeometry(0.05, 0.8, 0.05);
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x3a3d50, roughness: 0.2, metalness: 0.8 });
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(lx, 0.4, lz);
+    group.add(leg);
+  });
+
+  const monGeo = new THREE.BoxGeometry(0.7, 0.42, 0.04);
+  const mon = new THREE.Mesh(monGeo, MATS.monitor);
+  mon.position.set(0, 1.23, -0.26);
+  group.add(mon);
+
+  const screenGeo = new THREE.BoxGeometry(0.64, 0.36, 0.01);
+  const screen = new THREE.Mesh(screenGeo, MATS.screen(new THREE.Color(agent.color)));
+  screen.position.set(0, 1.23, -0.24);
+  group.add(screen);
+
+  const kbGeo = new THREE.BoxGeometry(0.5, 0.02, 0.16);
+  const kb = new THREE.Mesh(kbGeo, new THREE.MeshStandardMaterial({ color: 0x252738 }));
+  kb.position.set(0, 0.84, 0.1);
+  group.add(kb);
+
+  const seatGeo = new THREE.BoxGeometry(0.65, 0.06, 0.6);
+  const seat = new THREE.Mesh(seatGeo, MATS.chair);
+  seat.position.set(0, 0.48, 0.65);
+  group.add(seat);
+
+  const backGeo = new THREE.BoxGeometry(0.65, 0.7, 0.06);
+  const back = new THREE.Mesh(backGeo, MATS.chair);
+  back.position.set(0, 0.87, 0.95);
+  group.add(back);
+
+  group.position.set(x, 0, z);
+  officeGroup.add(group);
+  return group;
+}
+AGENTS.forEach(a => buildDesk(a));
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AVATAR BUILDER
+// ─────────────────────────────────────────────────────────────────────────────
+const avatarGroups = {};
+const avatarState = {};
+
+function buildAvatar(agent) {
+  const group = new THREE.Group();
+  const shirtMat = new THREE.MeshStandardMaterial({ color: agent.color, roughness: 0.8 });
+  const skinMat = new THREE.MeshStandardMaterial({ color: 0xc8956a, roughness: 0.8 });
+
+  const headGroup = new THREE.Group();
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), skinMat);
+  headGroup.add(skull);
+  headGroup.position.set(0, 1.65, 0);
+  group.add(headGroup);
+
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.52, 0.26), shirtMat);
+  torso.position.set(0, 1.18, 0);
+  group.add(torso);
+
+  const armGroups = {};
+  [-1, 1].forEach(side => {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 0.5, 8), shirtMat);
+    arm.position.set(side * 0.27, 1.2, 0);
+    group.add(arm);
+    armGroups[side === -1 ? 'lArm' : 'rArm'] = arm;
+  });
+
+  const legGroups = {};
+  [-1, 1].forEach(side => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.7, 8), new THREE.MeshStandardMaterial({ color: 0x1a1d2e }));
+    leg.position.set(side * 0.11, 0.45, 0);
+    group.add(leg);
+    legGroups[side === -1 ? 'lLeg' : 'rLeg'] = leg;
+  });
+
+  group.userData = { headGroup, torsoGroup: torso, armGroups, legGroups, agent, bobPhase: Math.random() * Math.PI * 2, isTalking: false, talkTimer: 0 };
+  group.position.set(agent.pos[0], 0, agent.pos[2] + 0.65);
+  group.rotation.y = Math.PI;
+  scene.add(group);
+  return group;
+}
+
+AGENTS.forEach(agent => {
+  avatarGroups[agent.id] = buildAvatar(agent);
+  avatarState[agent.id] = { status: 'idle', tasksDone: 0, lastMsg: '' };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARTICLES
+// ─────────────────────────────────────────────────────────────────────────────
+const pCanvas = document.getElementById('particle-canvas');
+const pCtx = pCanvas.getContext('2d');
+pCanvas.width = window.innerWidth;
+pCanvas.height = window.innerHeight;
+const particles = [];
+
+function worldToScreen(pos) {
+  const v = pos.clone().project(camera);
+  return { x: (v.x + 1) / 2 * window.innerWidth, y: (-v.y + 1) / 2 * window.innerHeight };
+}
+
+function spawnParticles(fromId, toId) {
+  const fromAv = avatarGroups[fromId];
+  const toAv   = avatarGroups[toId];
+  if (!fromAv || !toAv) return;
+  const fromPos = fromAv.position.clone(); fromPos.y += 1.8;
+  const toPos = toAv.position.clone(); toPos.y += 1.8;
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    const ctrl = new THREE.Vector3((fromPos.x + toPos.x) / 2, Math.max(fromPos.y, toPos.y) + 2, (fromPos.z + toPos.z) / 2);
+    particles.push({ from: fromPos.clone(), to: toPos.clone(), ctrl, t: 0, speed: 0.01 + Math.random() * 0.01, color: AGENT_MAP[fromId].hex, delay: i * 50, elapsed: 0 });
+  }
+}
+
+function updateParticles(dt) {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.elapsed += dt;
+    if (p.elapsed < p.delay) continue;
+    p.t += p.speed; if (p.t > 1) { particles.splice(i, 1); continue; }
+    const wt = p.t;
+    const ab = new THREE.Vector3().lerpVectors(p.from, p.ctrl, wt);
+    const bc = new THREE.Vector3().lerpVectors(p.ctrl, p.to, wt);
+    const pos3d = new THREE.Vector3().lerpVectors(ab, bc, wt);
+    const pos2d = worldToScreen(pos3d);
+    pCtx.beginPath(); pCtx.fillStyle = p.color; pCtx.arc(pos2d.x, pos2d.y, 3, 0, Math.PI * 2); pCtx.fill();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPEECH BUBBLES & FEED
+// ─────────────────────────────────────────────────────────────────────────────
+const bubbles = {};
+function showBubble(agentId, text) {
+  if (bubbles[agentId]) bubbles[agentId].remove();
+  const agent = AGENT_MAP[agentId];
+  const el = document.createElement('div');
+  el.className = 'speech-bubble';
+  el.innerHTML = `<div class="bubble-name" style="color:${agent.hex}">${agent.label} → </div><div class="bubble-text">${text.substring(0, 100)}${text.length > 100 ? '...' : ''}</div><div class="bubble-tail"></div>`;
+  document.body.appendChild(el);
+  bubbles[agentId] = el;
+  setTimeout(() => { if (bubbles[agentId] === el) { el.remove(); delete bubbles[agentId]; } }, 4000);
+}
+
+function addFeed(agentId, text) {
+  const agent = AGENT_MAP[agentId];
+  const feed = document.getElementById('feed-messages');
+  const el = document.createElement('div');
+  el.className = 'feed-msg';
+  el.style.setProperty('--msg-color', agent.hex);
+  el.innerHTML = `<div class="feed-agent">${agent.label} // ${agent.name}</div><div class="feed-text">${text}</div>`;
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function setPillStatus(agentId, status) {
+  const pill = document.getElementById(`status-${agentId}`);
+  if (!pill) return;
+  const st = pill.querySelector('.pill-status');
+  st.textContent = status.toUpperCase();
+  pill.classList.toggle('thinking', status === 'thinking');
+  pill.classList.toggle('active', status !== 'idle');
+}
+
+function updateBubblePositions() {
+  Object.entries(bubbles).forEach(([id, el]) => {
+    const av = avatarGroups[id]; if (!av) return;
+    const screen = worldToScreen(new THREE.Vector3(av.position.x, av.position.y + 2.2, av.position.z));
+    el.style.left = (screen.x - 100) + 'px'; el.style.top = (screen.y - 80) + 'px';
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSPECTOR
+// ─────────────────────────────────────────────────────────────────────────────
+function openInspector(agentId) {
+  const agent = AGENT_MAP[agentId];
+  const state = avatarState[agentId];
+  const el = document.getElementById('inspector');
+  el.style.setProperty('--i-color', agent.hex);
+  document.getElementById('insp-name').textContent = agent.label;
+  document.getElementById('insp-role').textContent = agent.name.toUpperCase();
+  document.getElementById('insp-status').textContent = state.status.toUpperCase();
+  document.getElementById('insp-model').textContent = agent.model;
+  document.getElementById('insp-tasks').textContent = state.tasksDone;
+  document.getElementById('insp-msg').textContent = state.lastMsg;
+  el.classList.add('open');
+}
+function closeInspector() { document.getElementById('inspector').classList.remove('open'); }
+
+const pillsEl = document.getElementById('top-agents');
+AGENTS.forEach(a => {
+  const pill = document.createElement('div');
+  pill.className = 'agent-pill';
+  pill.id = `status-${a.id}`;
+  pill.style.setProperty('--agent-color', a.hex);
+  pill.innerHTML = `<div class="pill-dot"></div>${a.label}<span class="pill-status">IDLE</span>`;
+  pill.onclick = () => openInspector(a.id);
+  pillsEl.appendChild(pill);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOOP
+// ─────────────────────────────────────────────────────────────────────────────
+let taskRunning = false;
+const clock = new THREE.Clock();
+let camTheta = 0.5, camPhi = 0.5, camRadius = 15;
+
+function animate(time) {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta() * 1000;
+  const t = clock.getElapsedTime();
+
+  camTheta += 0.001;
+  camera.position.x = Math.sin(camTheta) * Math.cos(camPhi) * camRadius;
+  camera.position.y = Math.sin(camPhi) * camRadius;
+  camera.position.z = Math.cos(camTheta) * Math.cos(camPhi) * camRadius;
+  camera.lookAt(0, 1, 0);
+
+  Object.values(avatarGroups).forEach(av => {
+    av.position.y = Math.sin(t * 1.5 + av.userData.bobPhase) * 0.05;
+    if (av.userData.isTalking) {
+        av.userData.talkTimer -= 0.016;
+        av.userData.headGroup.rotation.x = Math.sin(t * 15) * 0.1;
+        if (av.userData.talkTimer <= 0) av.userData.isTalking = false;
+    }
+  });
+
+  updateParticles(dt);
+  updateBubblePositions();
+  renderer.render(scene, camera);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOADING
+// ─────────────────────────────────────────────────────────────────────────────
+const loadBar = document.getElementById('load-bar');
+const loadSteps = [[0.2, 'CORE'], [0.5, 'SCENE'], [0.8, 'AGENTS'], [1.0, 'READY']];
+let si = 0;
+function doLoad() {
+  if (si >= loadSteps.length) { document.getElementById('loading').classList.add('done'); animate(); return; }
+  const [pct, msg] = loadSteps[si++];
+  loadBar.style.width = (pct * 100) + '%';
+  document.getElementById('load-status').textContent = msg;
+  setTimeout(doLoad, 300);
+}
+doLoad();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    pCanvas.width = window.innerWidth;
+    pCanvas.height = window.innerHeight;
+});
+</script>
 </body>
 </html>
