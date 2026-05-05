@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Office — Advanced Living Workspace</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #050508;
+  --pm:   #00ff9d;
+  --ui:   #9d00ff;
+  --fe:   #00aeff;
+  --be:   #ff5500;
+  --qa:   #ffaa00;
+  --dv:   #aeff00;
+  --glass: rgba(10, 12, 18, 0.6);
+  --glass-hover: rgba(20, 24, 34, 0.7);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-highlight: rgba(255, 255, 255, 0.2);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--ink);
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  color: #fff;
+}
+
+#canvas { display: block; position: fixed; inset: 0; z-index: 1; }
+
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* TOPBAR */
+#topbar {
+  position: fixed;
+  top: 20px; left: 24px; right: 24px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  pointer-events: all;
+  z-index: 20;
+}
+
+.logo {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-transform: uppercase;
+}
+
+.logo-icon {
+  width: 24px; height: 24px;
+  background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 0 20px rgba(255,255,255,0.2);
+}
+
+.logo-icon::after {
+  content: '';
+  width: 8px; height: 8px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+.top-agents {
+  display: flex;
+  gap: 8px;
+}
+
+.agent-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 6px 8px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.05em;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.agent-pill:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.agent-pill.active {
+  border-color: var(--agent-color);
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4), inset 0 0 12px rgba(255,255,255,0.02);
+}
+
+.pill-icon {
+  width: 24px; height: 24px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+}
+
+.pill-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--agent-color);
+  box-shadow: 0 0 10px var(--agent-color);
+  transition: all 0.3s;
+}
+
+.pill-status {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255,255,255,0.4);
+  margin-left: 4px;
+}
+
+.agent-pill.thinking .pill-dot { animation: pulse-dot 1s infinite; }
+@keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.4} }
+
+/* TASK PANEL */
+#task-panel {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  pointer-events: all;
+  z-index: 20;
+  border-radius: 20px;
+}
+
+.task-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 6px;
+}
+
+.task-prefix {
+  padding: 0 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--pm);
+  text-shadow: 0 0 8px rgba(0,255,157,0.4);
+  white-space: nowrap;
+  letter-spacing: 0.1em;
+}
+
+#task-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 16px 0;
+  caret-color: var(--pm);
+}
+
+#task-input::placeholder { color: rgba(255,255,255,0.25); }
+
+#send-btn {
+  padding: 12px 24px;
+  background: #fff;
+  color: var(--ink);
+  border: none;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+#send-btn:hover {
+  background: var(--pm);
+  box-shadow: 0 0 20px rgba(0,255,157,0.4);
+  transform: scale(1.02);
+}
+#send-btn:active { transform: scale(0.98); }
+
+/* FEED PANEL */
+#feed-panel {
+  position: fixed;
+  right: 24px;
+  top: 100px;
+  bottom: 300px;
+  width: 320px;
+  border-radius: 16px;
+  pointer-events: all;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.panel-header {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-header::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 50%;
+}
+
+#feed-messages {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 6px;
+}
+
+#feed-messages::-webkit-scrollbar { width: 4px; }
+#feed-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+.feed-msg {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-left: 3px solid var(--msg-color);
+  animation: slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feed-msg::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0; width: 30px;
+  background: linear-gradient(90deg, var(--msg-color) 0%, transparent 100%);
+  opacity: 0.05;
+}
+
+@keyframes slide-in {
+  from { opacity:0; transform: translateX(20px); }
+  to   { opacity:1; transform: translateX(0); }
+}
+
+.feed-agent {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--msg-color);
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.feed-text {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.5;
+}
+
+/* WORKSPACE VIEWER */
+#workspace-viewer {
+  position: fixed;
+  right: 24px;
+  bottom: 30px;
+  width: 320px;
+  height: 250px;
+  border-radius: 16px;
+  pointer-events: all;
+  z-index: 20;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+#file-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.file-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.file-icon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.file-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+}
+
+/* INSPECTOR */
+#inspector {
+  position: fixed;
+  left: 24px;
+  top: 100px;
+  width: 280px;
+  border-radius: 16px;
+  pointer-events: all;
+  z-index: 20;
+  padding: 24px;
+  transform: translateX(-320px);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#inspector.open { transform: translateX(0); }
+
+.inspector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.inspector-agent-name {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.inspector-role {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--i-color);
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.inspector-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.1);
+}
+
+.inspector-stat:last-child { border-bottom: none; }
+
+.stat-label { color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 500; }
+.stat-value { color: #fff; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.stat-value.active { color: var(--i-color); text-shadow: 0 0 8px var(--i-color); }
+
+.close-inspector {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.close-inspector:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* FLOATING SPEECH BUBBLE (3D attached via HTML) */
+.speech-bubble {
+  position: absolute;
+  pointer-events: none;
+  z-index: 30;
+  background: rgba(10,12,18,0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--bubble-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-width: 240px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 16px rgba(var(--bubble-rgb), 0.2);
+  animation: bubble-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom center;
+  transform: translate(-50%, -100%);
+}
+
+@keyframes bubble-in {
+  from { opacity:0; transform: translate(-50%, -80%) scale(0.8); }
+  to   { opacity:1; transform: translate(-50%, -100%) scale(1); }
+}
+
+.bubble-name {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  color: var(--bubble-color);
+}
+
+.bubble-text {
+  font-size: 12px;
+  color: rgba(255,255,255,0.9);
+  line-height: 1.5;
+}
+
+.bubble-tail {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--bubble-color);
+}
+
+/* MISC UI */
+#status-bar {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  z-index: 20;
+}
+
+#connection-status {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.05em;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #ff5500;
+  box-shadow: 0 0 8px #ff5500;
+}
+
+#connection-status.connected .status-dot {
+  background: var(--pm);
+  box-shadow: 0 0 8px var(--pm);
+}
+
+/* LOADING SCREEN */
+#loading {
+  position: fixed;
+  inset: 0;
+  background: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: opacity 0.8s, visibility 0.8s;
+}
+
+#loading.done { opacity: 0; visibility: hidden; }
+
+.load-spinner {
+  width: 60px; height: 60px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: var(--pm);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.load-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.2em;
+  margin-bottom: 12px;
+}
+
+.load-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.05em;
+}
+
+#click-hint {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  z-index: 20;
+  background: rgba(0,0,0,0.5);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="load-spinner"></div>
+  <div class="load-title">AI OFFICE</div>
+  <div class="load-status" id="load-status">INITIALIZING WEBGL CORE...</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<div id="topbar" class="glass-panel">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    AI OFFICE
+  </div>
+  <div class="top-agents" id="top-agents"></div>
+</div>
+
+<div id="feed-panel" class="glass-panel">
+  <div class="panel-header">LIVE EVENT STREAM</div>
+  <div id="feed-messages"></div>
+</div>
+
+<div id="workspace-viewer" class="glass-panel">
+  <div class="panel-header">VIRTUAL FILE SYSTEM</div>
+  <div id="file-list"></div>
+</div>
+
+<div id="inspector" class="glass-panel">
+  <div class="inspector-header">
+    <div>
+      <div class="inspector-agent-name" id="insp-name">—</div>
+      <div class="inspector-role" id="insp-role">—</div>
+    </div>
+    <button class="close-inspector" onclick="closeInspector()">×</button>
+  </div>
+  <div class="inspector-stat"><span class="stat-label">STATUS</span><span class="stat-value active" id="insp-status">IDLE</span></div>
+  <div class="inspector-stat"><span class="stat-label">LLM ENGINE</span><span class="stat-value" id="insp-model">—</span></div>
+  <div class="inspector-stat"><span class="stat-label">TASKS COMPLETED</span><span class="stat-value" id="insp-tasks">0</span></div>
+</div>
+
+<div id="task-panel" class="glass-panel">
+  <div class="task-input-wrap">
+    <span class="task-prefix">SYS.PROMPT ></span>
+    <input id="task-input" type="text" placeholder="Initialize a new project, write code, or request a review..." autocomplete="off" />
+    <button id="send-btn" onclick="startTask()">EXECUTE</button>
+  </div>
+</div>
+
+<div id="status-bar">SYSTEM AWAITING INSTRUCTIONS</div>
+<div id="connection-status"><div class="status-dot"></div><span id="conn-text">OFFLINE</span></div>
+<div id="click-hint">LMB: ORBIT • SCROLL: ZOOM • CLICK AGENT: INSPECT</div>
+
+<!-- THREE.JS & POST-PROCESSING -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIGURATION & STATE
+// ─────────────────────────────────────────────────────────────────────────────
+const backendURL = 'ws://127.0.0.1:8000/ws';
+const backendHTTP = 'http://127.0.0.1:8000';
+
+let ws = null;
+let wsConnected = false;
+let taskRunning = false;
+
+const AGENTS = [
+  { id:'pm',       label:'PM',       role:'Project Manager',    color:0x00ff9d, hex:'#00ff9d', model:'llama3:8b',           pos:[  0, 0, -3.5] },
+  { id:'ui',       label:'UI/UX',    role:'Product Designer',   color:0x9d00ff, hex:'#9d00ff', model:'llama3:8b',           pos:[ -4, 0, -1  ] },
+  { id:'frontend', label:'Frontend', role:'Frontend Engineer',  color:0x00aeff, hex:'#00aeff', model:'codellama:latest',    pos:[ -2.2, 0,  1.8] },
+  { id:'backend',  label:'Backend',  role:'Systems Engineer',   color:0xff5500, hex:'#ff5500', model:'codellama:latest',    pos:[  2.2, 0,  1.8] },
+  { id:'qa',       label:'QA',       role:'Quality Assurance',  color:0xffaa00, hex:'#ffaa00', model:'llama3:8b',           pos:[  4,   0, -1  ] },
+  { id:'devops',   label:'DevOps',   role:'Infrastructure',     color:0xaeff00, hex:'#aeff00', model:'llama3:8b',           pos:[  0,   0,  3.2] },
+];
+
+const AGENT_MAP = {};
+AGENTS.forEach(a => AGENT_MAP[a.id] = a);
+
+const avatarGroups = {};
+const avatarState = {};
+const bubbles = {};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WEBSOCKET INTEGRATION
+// ─────────────────────────────────────────────────────────────────────────────
+function connectWebSocket() {
+  try {
+    ws = new WebSocket(backendURL);
+    ws.onopen = () => {
+      wsConnected = true;
+      document.getElementById('connection-status').classList.add('connected');
+      document.getElementById('conn-text').textContent = 'CONNECTED';
+      document.getElementById('status-bar').textContent = 'SYSTEM READY — AWAITING PROMPT';
+    };
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      handleBackendMessage(data);
+    };
+    ws.onerror = () => wsConnected = false;
+    ws.onclose = () => {
+      wsConnected = false;
+      document.getElementById('connection-status').classList.remove('connected');
+      document.getElementById('conn-text').textContent = 'OFFLINE';
+      setTimeout(connectWebSocket, 3000);
+    };
+  } catch (e) {
+    setTimeout(connectWebSocket, 3000);
+  }
+}
+
+function handleBackendMessage(data) {
+  const fromAgent = data.from || 'pm';
+  const agentId = getAgentIdFromName(fromAgent);
+  if (!agentId) return;
+
+  addFeed(agentId, data.message);
+  showBubble(agentId, data.message);
+
+  const isThinking = data.message.toLowerCase().includes('thinking') || data.type === 'thinking';
+  const status = isThinking ? 'thinking' : (data.type === 'complete' ? 'idle' : 'active');
+  
+  setPillStatus(agentId, status);
+  avatarState[agentId].status = status;
+  avatarState[agentId].lastMsg = data.message.substring(0, 80) + '...';
+  
+  if (status === 'active') avatarState[agentId].tasksDone++;
+
+  const av = avatarGroups[agentId];
+  if (av && status !== 'idle') {
+    av.userData.isTalking = true;
+    av.userData.talkTimer = 2;
+  }
+
+  if (data.to) {
+    const toId = getAgentIdFromName(data.to);
+    if (toId && toId !== agentId) {
+      spawnDataStream(agentId, toId);
+    }
+  }
+
+  refreshWorkspace();
+
+  if (data.message.includes('complete') && data.message.toLowerCase().includes('all')) {
+    setTimeout(() => {
+      AGENTS.forEach(a => setPillStatus(a.id, 'idle'));
+      taskRunning = false;
+      const btn = document.getElementById('send-btn');
+      btn.textContent = 'EXECUTE';
+      btn.style.opacity = '1';
+    }, 1500);
+  }
+}
+
+function startTask() {
+  if (!wsConnected) {
+    alert('Backend offline. Please start the backend server.');
+    return;
+  }
+  if (taskRunning) return;
+
+  const input = document.getElementById('task-input');
+  const description = input.value.trim();
+  if (!description) return;
+
+  taskRunning = true;
+  input.value = '';
+  const btn = document.getElementById('send-btn');
+  btn.textContent = 'PROCESSING...';
+  btn.style.opacity = '0.5';
+  document.getElementById('feed-messages').innerHTML = '';
+
+  fetch(`${backendHTTP}/task`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ description })
+  }).catch(() => {
+    taskRunning = false;
+    btn.textContent = 'EXECUTE';
+    btn.style.opacity = '1';
+  });
+}
+
+function refreshWorkspace() {
+  if (!wsConnected) return;
+  fetch(`${backendHTTP}/workspace`)
+    .then(r => r.json())
+    .then(data => {
+      const list = document.getElementById('file-list');
+      list.innerHTML = '';
+      (data.files || []).forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `<span class="file-icon">📄</span><span class="file-name">${file}</span>`;
+        item.onclick = () => {
+          fetch(`${backendHTTP}/workspace/${file}`)
+            .then(r => r.json())
+            .then(d => {
+              const preview = d.content.substring(0, 500) + (d.content.length > 500 ? '\n...' : '');
+              alert(`File: ${file}\n\n${preview}`);
+            });
+        };
+        list.appendChild(item);
+      });
+    })
+    .catch(() => {});
+}
+
+setInterval(refreshWorkspace, 5000);
+
+function getAgentIdFromName(name) {
+  const map = {
+    'pm': 'pm', 'project manager': 'pm',
+    'ui': 'ui', 'ui/ux': 'ui', 'designer': 'ui',
+    'frontend': 'frontend', 'frontend developer': 'frontend',
+    'backend': 'backend', 'backend developer': 'backend',
+    'qa': 'qa', 'qa engineer': 'qa',
+    'devops': 'devops', 'devops engineer': 'devops',
+  };
+  return map[name.toLowerCase()] || null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function initUI() {
+  const pillsEl = document.getElementById('top-agents');
+  AGENTS.forEach(a => {
+    const pill = document.createElement('div');
+    pill.className = 'agent-pill';
+    pill.id = `pill-${a.id}`;
+    pill.style.setProperty('--agent-color', a.hex);
+    pill.innerHTML = `<div class="pill-icon"><div class="pill-dot"></div></div>${a.label}<span class="pill-status">IDLE</span>`;
+    pill.onclick = () => openInspector(a.id);
+    pillsEl.appendChild(pill);
+  });
+
+  document.getElementById('task-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') startTask();
+  });
+}
+
+function setPillStatus(agentId, status) {
+  const pill = document.getElementById(`pill-${agentId}`);
+  if (!pill) return;
+  const st = pill.querySelector('.pill-status');
+  st.textContent = status.toUpperCase();
+  pill.classList.toggle('thinking', status === 'thinking');
+  pill.classList.toggle('active', status !== 'idle');
+}
+
+function addFeed(agentId, text) {
+  const agent = AGENT_MAP[agentId];
+  const feed = document.getElementById('feed-messages');
+  const el = document.createElement('div');
+  el.className = 'feed-msg';
+  el.style.setProperty('--msg-color', agent.hex);
+  
+  const time = new Date().toLocaleTimeString([], {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  el.innerHTML = `
+    <div class="feed-agent"><span>${agent.label}</span><span>[${time}]</span></div>
+    <div class="feed-text">${text}</div>
+  `;
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+  if (feed.children.length > 30) feed.removeChild(feed.firstChild);
+}
+
+function showBubble(agentId, text) {
+  if (bubbles[agentId]) bubbles[agentId].remove();
+  const agent = AGENT_MAP[agentId];
+  const el = document.createElement('div');
+  el.className = 'speech-bubble';
+  el.style.setProperty('--bubble-color', agent.hex);
+  
+  // parse hex to rgb for shadow
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(agent.hex);
+  const rgb = result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255,255,255';
+  el.style.setProperty('--bubble-rgb', rgb);
+
+  const truncated = text.length > 90 ? text.substring(0, 90) + '...' : text;
+  el.innerHTML = `
+    <div class="bubble-name">${agent.role.toUpperCase()}</div>
+    <div class="bubble-text">${truncated}</div>
+    <div class="bubble-tail"></div>
+  `;
+  document.body.appendChild(el);
+  bubbles[agentId] = el;
+
+  setTimeout(() => {
+    if (bubbles[agentId] === el) {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.4s';
+      setTimeout(() => { el.remove(); delete bubbles[agentId]; }, 400);
+    }
+  }, 4000);
+}
+
+function updateBubblePositions() {
+  Object.entries(bubbles).forEach(([id, el]) => {
+    const av = avatarGroups[id];
+    if (!av) return;
+    const pos = av.position.clone();
+    pos.y += 2.4; // above head
+    const screen = worldToScreen(pos);
+    if(screen.z > 1.0) { el.style.display = 'none'; return; } // behind camera
+    el.style.display = 'block';
+    el.style.left = screen.x + 'px';
+    el.style.top  = screen.y + 'px';
+  });
+}
+
+function openInspector(agentId) {
+  const agent = AGENT_MAP[agentId];
+  const state = avatarState[agentId];
+  const el = document.getElementById('inspector');
+  el.style.setProperty('--i-color', agent.hex);
+  document.getElementById('insp-name').textContent = agent.label;
+  document.getElementById('insp-role').textContent = agent.role.toUpperCase();
+  document.getElementById('insp-status').textContent = (state.status || 'IDLE').toUpperCase();
+  document.getElementById('insp-model').textContent = agent.model;
+  document.getElementById('insp-tasks').textContent = state.tasksDone || 0;
+  el.classList.add('open');
+}
+
+function closeInspector() {
+  document.getElementById('inspector').classList.remove('open');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THREE.JS CORE ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+const container = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.domElement.id = 'canvas';
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050508);
+scene.fog = new THREE.FogExp2(0x050508, 0.04);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 12, 16);
+camera.lookAt(0, 0, 0);
+
+// POST-PROCESSING (BLOOM)
+const renderScene = new THREE.RenderPass(scene, camera);
+const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+bloomPass.threshold = 0.2;
+bloomPass.strength = 1.8; // High strength for neon look
+bloomPass.radius = 0.6;
+
+const composer = new THREE.EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LIGHTING & ENVIRONMENT
+// ─────────────────────────────────────────────────────────────────────────────
+const ambientLight = new THREE.AmbientLight(0x0f111a, 2.0);
+scene.add(ambientLight);
+
+const moonLight = new THREE.DirectionalLight(0x4455aa, 1.5);
+moonLight.position.set(-10, 20, -10);
+moonLight.castShadow = true;
+moonLight.shadow.mapSize.width = 2048;
+moonLight.shadow.mapSize.height = 2048;
+moonLight.shadow.camera.near = 0.5;
+moonLight.shadow.camera.far = 50;
+moonLight.shadow.camera.left = -15;
+moonLight.shadow.camera.right = 15;
+moonLight.shadow.camera.top = 15;
+moonLight.shadow.camera.bottom = -15;
+moonLight.shadow.bias = -0.001;
+scene.add(moonLight);
+
+// High-tech floor
+const floorGeo = new THREE.PlaneGeometry(100, 100);
+const floorMat = new THREE.MeshStandardMaterial({ 
+  color: 0x050508, 
+  roughness: 0.1, 
+  metalness: 0.8 
+});
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// Glowing Grid
+const gridHelper = new THREE.GridHelper(60, 60, 0x111522, 0x0a0c14);
+gridHelper.position.y = 0.01;
+scene.add(gridHelper);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DESK & AVATAR GENERATION
+// ─────────────────────────────────────────────────────────────────────────────
+const MATS = {
+  deskSurface: new THREE.MeshStandardMaterial({ color: 0x11131a, roughness: 0.2, metalness: 0.6 }),
+  deskTrim: new THREE.MeshStandardMaterial({ color: 0x222633, roughness: 0.4, metalness: 0.5 }),
+  bodyBase: new THREE.MeshStandardMaterial({ color: 0x1a1c24, roughness: 0.8 }),
+  glass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.2, transmission: 0.9 })
+};
+
+function createNeonMaterial(colorHex) {
+  return new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    emissive: colorHex,
+    emissiveIntensity: 2.0
+  });
+}
+
+function buildDesk(agent) {
+  const group = new THREE.Group();
+  const [x,,z] = agent.pos;
+  const neonMat = createNeonMaterial(agent.color);
+
+  // Main Desk
+  const deskGeo = new THREE.BoxGeometry(2.4, 0.05, 1.2);
+  const desk = new THREE.Mesh(deskGeo, MATS.deskSurface);
+  desk.position.y = 0.9;
+  desk.castShadow = true;
+  desk.receiveShadow = true;
+  group.add(desk);
+
+  // Neon Trim
+  const trimGeo = new THREE.BoxGeometry(2.42, 0.01, 1.22);
+  const trim = new THREE.Mesh(trimGeo, neonMat);
+  trim.position.y = 0.89;
+  group.add(trim);
+
+  // Holographic Screens
+  const screenGeo = new THREE.PlaneGeometry(1.0, 0.55);
+  const screenLeft = new THREE.Mesh(screenGeo, MATS.glass);
+  screenLeft.position.set(-0.55, 1.35, -0.2);
+  screenLeft.rotation.y = 0.2;
+  group.add(screenLeft);
+
+  const screenRight = new THREE.Mesh(screenGeo, MATS.glass);
+  screenRight.position.set(0.55, 1.35, -0.2);
+  screenRight.rotation.y = -0.2;
+  group.add(screenRight);
+
+  // Screen glowing borders
+  const borderGeo = new THREE.EdgesGeometry(screenGeo);
+  const borderLeft = new THREE.LineSegments(borderGeo, neonMat);
+  borderLeft.position.copy(screenLeft.position);
+  borderLeft.rotation.copy(screenLeft.rotation);
+  group.add(borderLeft);
+  
+  const borderRight = new THREE.LineSegments(borderGeo, neonMat);
+  borderRight.position.copy(screenRight.position);
+  borderRight.rotation.copy(screenRight.rotation);
+  group.add(borderRight);
+
+  // Desk Base/Legs
+  const legGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.9, 8);
+  const legMat = MATS.deskTrim;
+  [-1.0, 1.0].forEach(lx => {
+    [-0.4, 0.4].forEach(lz => {
+      const leg = new THREE.Mesh(legGeo, legMat);
+      leg.position.set(lx, 0.45, lz);
+      leg.castShadow = true;
+      group.add(leg);
+    });
+  });
+
+  // Base Light Point
+  const pointLight = new THREE.PointLight(agent.color, 1.5, 4.0);
+  pointLight.position.set(0, 1.5, -0.5);
+  group.add(pointLight);
+
+  group.position.set(x, 0, z);
+  scene.add(group);
+}
+
+function buildAbstractAvatar(agent) {
+  const group = new THREE.Group();
+  const neonMat = createNeonMaterial(agent.color);
+  
+  // Core Body (Abstract floating shape)
+  const coreGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 16);
+  const core = new THREE.Mesh(coreGeo, MATS.bodyBase);
+  core.position.y = 1.2;
+  core.castShadow = true;
+  group.add(core);
+
+  // Glowing Head ring
+  const ringGeo = new THREE.TorusGeometry(0.12, 0.02, 8, 24);
+  const ring = new THREE.Mesh(ringGeo, neonMat);
+  ring.position.y = 1.7;
+  ring.rotation.x = Math.PI / 2;
+  group.add(ring);
+
+  // Floating orbit spheres
+  const orbitGroup = new THREE.Group();
+  orbitGroup.position.y = 1.2;
+  for(let i=0; i<3; i++) {
+    const sGeo = new THREE.SphereGeometry(0.04, 8, 8);
+    const s = new THREE.Mesh(sGeo, neonMat);
+    const angle = (i/3) * Math.PI * 2;
+    s.position.set(Math.cos(angle)*0.4, (Math.random()-0.5)*0.2, Math.sin(angle)*0.4);
+    orbitGroup.add(s);
+  }
+  group.add(orbitGroup);
+
+  group.userData = {
+    core, ring, orbitGroup,
+    baseY: 1.2,
+    phase: Math.random() * Math.PI * 2,
+    isTalking: false, talkTimer: 0
+  };
+
+  group.position.set(agent.pos[0], 0, agent.pos[2] + 0.8);
+  scene.add(group);
+  return group;
+}
+
+AGENTS.forEach(a => {
+  buildDesk(a);
+  avatarGroups[a.id] = buildAbstractAvatar(a);
+  avatarState[a.id] = { status: 'idle', tasksDone: 0, lastMsg: '' };
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3D DATA STREAMS (PARTICLES)
+// ─────────────────────────────────────────────────────────────────────────────
+const streams = [];
+const particleGeo = new THREE.BoxGeometry(0.04, 0.04, 0.1);
+
+function spawnDataStream(fromId, toId) {
+  const fromAv = avatarGroups[fromId];
+  const toAv = avatarGroups[toId];
+  if(!fromAv || !toAv) return;
+
+  const start = fromAv.position.clone(); start.y = 1.5;
+  const end = toAv.position.clone(); end.y = 1.5;
+  
+  const neonMat = createNeonMaterial(AGENT_MAP[fromId].color);
+  
+  for(let i=0; i<15; i++) {
+    const mesh = new THREE.Mesh(particleGeo, neonMat);
+    mesh.position.copy(start);
+    scene.add(mesh);
+    
+    // bezier control point
+    const mid = start.clone().lerp(end, 0.5);
+    mid.y += 1.0 + Math.random() * 1.5;
+    mid.x += (Math.random()-0.5) * 1.5;
+    mid.z += (Math.random()-0.5) * 1.5;
+
+    streams.push({
+      mesh,
+      p0: start.clone(),
+      p1: mid,
+      p2: end.clone(),
+      t: - (i * 0.05), // stagger start
+      speed: 0.015 + Math.random() * 0.005
+    });
+  }
+}
+
+function updateStreams() {
+  for(let i=streams.length-1; i>=0; i--) {
+    const s = streams[i];
+    s.t += s.speed;
+    
+    if(s.t > 1.0) {
+      scene.remove(s.mesh);
+      streams.splice(i, 1);
+      continue;
+    }
+    
+    if(s.t >= 0) {
+      // Quadratic Bezier
+      const t = s.t;
+      const mt = 1 - t;
+      const x = mt*mt*s.p0.x + 2*mt*t*s.p1.x + t*t*s.p2.x;
+      const y = mt*mt*s.p0.y + 2*mt*t*s.p1.y + t*t*s.p2.y;
+      const z = mt*mt*s.p0.z + 2*mt*t*s.p1.z + t*t*s.p2.z;
+      
+      const prev = s.mesh.position.clone();
+      s.mesh.position.set(x, y, z);
+      s.mesh.lookAt(prev); // point in direction of travel
+      
+      // fade out
+      s.mesh.scale.setScalar(1 - (t * 0.8));
+    } else {
+      s.mesh.visible = false;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CAMERA & INTERACTION
+// ─────────────────────────────────────────────────────────────────────────────
+let camAngle = 0;
+let isDragging = false;
+let lastX = 0;
+
+container.addEventListener('mousedown', e => { isDragging = true; lastX = e.clientX; });
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if(isDragging) {
+    camAngle -= (e.clientX - lastX) * 0.005;
+    lastX = e.clientX;
+  }
+});
+
+container.addEventListener('wheel', e => {
+  const zoom = Math.max(8, Math.min(25, camera.position.length() + e.deltaY * 0.02));
+  camera.position.setLength(zoom);
+});
+
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+container.addEventListener('click', e => {
+  if(isDragging) return; // Prevent click on drag release
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+
+  const meshes = [];
+  AGENTS.forEach(a => {
+    avatarGroups[a.id].traverse(m => { if(m.isMesh) { m.userData.agentId = a.id; meshes.push(m); } });
+  });
+
+  const hits = raycaster.intersectObjects(meshes);
+  if(hits.length > 0) openInspector(hits[0].object.userData.agentId);
+});
+
+function worldToScreen(pos) {
+  const v = pos.clone().project(camera);
+  return {
+    x: (v.x + 1) / 2 * window.innerWidth,
+    y: (-v.y + 1) / 2 * window.innerHeight,
+    z: v.z
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAIN RENDER LOOP
+// ─────────────────────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const time = clock.getElapsedTime();
+
+  // Auto-rotate if not interacting
+  if(!isDragging) camAngle += 0.001;
+
+  const radius = camera.position.length();
+  camera.position.x = Math.sin(camAngle) * radius;
+  camera.position.z = Math.cos(camAngle) * radius;
+  camera.lookAt(0, 0, 0);
+
+  // Avatar Animations
+  AGENTS.forEach(a => {
+    const av = avatarGroups[a.id];
+    const ud = av.userData;
+    
+    // Hovering
+    ud.core.position.y = ud.baseY + Math.sin(time * 2 + ud.phase) * 0.05;
+    
+    // Orbit rotation
+    ud.orbitGroup.rotation.y = time * 0.5;
+    if(avatarState[a.id].status === 'thinking') {
+      ud.orbitGroup.rotation.y = time * 2.0; // faster when thinking
+      ud.ring.scale.setScalar(1 + Math.sin(time*5)*0.1);
+    } else {
+      ud.ring.scale.setScalar(1);
+    }
+
+    // Talking pulse
+    if(ud.isTalking) {
+      ud.talkTimer -= 0.016;
+      ud.ring.rotation.x = Math.PI/2 + Math.sin(time * 15) * 0.2;
+      if(ud.talkTimer <= 0) ud.isTalking = false;
+    } else {
+      ud.ring.rotation.x = Math.PI/2;
+    }
+  });
+
+  updateStreams();
+  updateBubblePositions();
+
+  composer.render();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOTSTRAP
+// ─────────────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+initUI();
+connectWebSocket();
+
+// Fake loading sequence
+setTimeout(() => {
+  document.getElementById('load-status').textContent = 'INITIALIZING LLM WORKERS...';
+  setTimeout(() => {
+    document.getElementById('load-status').textContent = 'ESTABLISHING NEURAL LINK...';
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('done');
+      animate();
+    }, 600);
+  }, 600);
+}, 600);
+
+</script>
+</body>
+</html>
